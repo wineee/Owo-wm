@@ -33,6 +33,11 @@ target_link_libraries(${target}
 include(PackageVersionHelper)
 setup_package_version_variables(WLROOTS)
 
+target_compile_definitions(${target}
+    PRIVATE
+    WLR_USE_UNSTABLE
+)
+
 set_property(TARGET ${target} PROPERTY POSITION_INDEPENDENT_CODE TRUE)
 
 install(TARGETS ${target} DESTINATION ${CMAKE_INSTALL_BINDIR})
