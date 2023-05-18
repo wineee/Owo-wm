@@ -12,6 +12,7 @@ pkg_search_module(WAYLAND_PROTOCOLS REQUIRED wayland-protocols)
 
 include(WaylandScannerHelpers)
 ws_generate(server stable/xdg-shell/xdg-shell.xml xdg-shell-protocol)
+ws_generate(server unstable/xdg-decoration/xdg-decoration-unstable-v1.xml xdg-decoration-protocol)
 
 file(GLOB_RECURSE PROJECT_SOURCES CONFIGURE_DEPENDS *.cpp *.h)
 

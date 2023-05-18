@@ -1,6 +1,8 @@
 #ifndef SERVER_H
 #define SERVER_H
 
+#include "qboxdecoration.h"
+
 #include <QRect>
 
 #include <qwbackend.h>
@@ -42,6 +44,7 @@ QW_USE_NAMESPACE
 class QBoxServer : public QObject
 {
     Q_OBJECT
+    friend class QBoxDecoration;
 public:
     QBoxServer();
     ~QBoxServer();
@@ -81,6 +84,8 @@ private:
         QWXdgToplevel *xdgToplevel;
         QWSceneTree *sceneTree;
         QPointF pos;
+
+        QWXdgToplevelDecorationV1 *decoration;
     };
 
     enum class CursorState {
@@ -114,6 +119,8 @@ private:
     View *grabbedView = nullptr;
     QPointF grabCursorPos;
     QRectF grabGeoBox;
+
+    QBoxDecoration *decoration;
 
     QWCursor *cursor;
     QWXCursorManager *cursorManager;

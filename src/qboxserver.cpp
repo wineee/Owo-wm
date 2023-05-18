@@ -31,6 +31,8 @@ QBoxServer::QBoxServer()
     xdgShell = QWXdgShell::create(display, 3);
     connect(xdgShell, &QWXdgShell::newSurface, this, &QBoxServer::onNewXdgSurface);
 
+    decoration = new QBoxDecoration(this);
+
     cursor = new QWCursor(this);
     cursor->attachOutputLayout(outputLayout);
     cursorManager = QWXCursorManager::create(nullptr, 24);
