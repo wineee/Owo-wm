@@ -113,6 +113,7 @@ void QBoxServer::onNewXdgSurface(wlr_xdg_surface *surface)
     connect(s, &QWXdgToplevel::requestMove, this, &QBoxServer::onXdgToplevelRequestMove);
     connect(s, &QWXdgToplevel::requestResize, this, &QBoxServer::onXdgToplevelRequestResize);
     connect(s, &QWXdgToplevel::requestMaximize, this, &QBoxServer::onXdgToplevelRequestMaximize);
+    connect(s, &QWXdgToplevel::requestMinimize, this, &QBoxServer::onXdgToplevelRequestMinimize);
     connect(s, &QWXdgToplevel::requestFullscreen, this, &QBoxServer::onXdgToplevelRequestRequestFullscreen);
     connect(s, &QWXdgToplevel::destroyed, this, [this, view] {
         views.removeOne(view);
@@ -210,8 +211,35 @@ void QBoxServer::onXdgToplevelRequestMaximize(bool maximize)
     view->xdgToplevel->setSize(usable_area.size());
     view->xdgToplevel->setMaximized(!is_maximized);
     view->sceneTree->setPosition(view->geometry.topLeft());
-
 //    surface->scheduleConfigure();
+}
+
+void QBoxServer::onXdgToplevelRequestMinimize(bool minimize)
+{
+    auto surface = qobject_cast<QWXdgSurface*>(sender());
+    auto view = getView(surface);
+    bool minimize_requested = view->xdgToplevel->handle()->requested.minimized;
+
+    if (minimize_requested) {
+        view->previous_geometry = view->geometry;
+        // FIXME: should not set this
+        view->previous_geometry.setWidth(view->xdgToplevel->handle()->current.width);
+        view->previous_geometry.setHeight(view->xdgToplevel->handle()->current.height);
+
+        view->geometry.setY(-view->previous_geometry.height());
+
+        //auto *next_view = view.
+        //struct wb_view *next_view = wl_container_of(view->link.next, next_view, link);
+
+        //if (wl_list_length(&view->link) > 1)
+        //	focus_view(next_view, next_view->xdg_toplevel->base->surface);
+        //else
+        //	focus_view(view, view->xdg_toplevel->base->surface);
+    } else {
+        view->geometry = view->previous_geometry;
+    }
+
+    view->sceneTree->setPosition(view->geometry.topLeft());
 }
 
 void QBoxServer::onXdgToplevelRequestRequestFullscreen(bool fullscreen)

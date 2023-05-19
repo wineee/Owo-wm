@@ -59,6 +59,7 @@ private Q_SLOTS:
     void onXdgToplevelRequestMove(wlr_xdg_toplevel_move_event *);
     void onXdgToplevelRequestResize(wlr_xdg_toplevel_resize_event *event);
     void onXdgToplevelRequestMaximize(bool maximize);
+    void onXdgToplevelRequestMinimize(bool minimize);
     void onXdgToplevelRequestRequestFullscreen(bool fullscreen);
 
     void onCursorMotion(wlr_pointer_motion_event *event);
