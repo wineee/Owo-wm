@@ -196,8 +196,8 @@ void QBoxServer::onXdgToplevelRequestMaximize(bool maximize)
 
     bool is_maximized = view->xdgToplevel->handle()->current.maximized;
     if (!is_maximized) {
-         // struct wb_config *config = view->server->config;
          view->previous_geometry = view->geometry;
+         // FIXME: should not set this
          view->previous_geometry.setWidth(view->xdgToplevel->handle()->current.width);
          view->previous_geometry.setHeight(view->xdgToplevel->handle()->current.height);
          view->geometry.setX(0);
@@ -211,7 +211,6 @@ void QBoxServer::onXdgToplevelRequestMaximize(bool maximize)
     view->xdgToplevel->setMaximized(!is_maximized);
     view->sceneTree->setPosition(view->geometry.topLeft());
 
-//    auto surface = qobject_cast<QWXdgSurface*>(sender());
 //    surface->scheduleConfigure();
 }
 
@@ -381,10 +380,10 @@ QBoxServer::View *QBoxServer::viewAt(const QPointF &pos, wlr_surface **surface, 
 void QBoxServer::processCursorMotion(uint32_t time)
 {
     if (cursorState == CursorState::MovingWindow) {
-        grabbedView->pos = grabGeoBox.topLeft() + (cursor->position() - grabCursorPos);
-        // TODO: remove pos
-        grabbedView->geometry.setTopLeft(grabbedView->pos.toPoint());
-        grabbedView->sceneTree->setPosition(grabbedView->pos.toPoint());
+        grabbedView->geometry.setTopLeft(
+                    (grabGeoBox.topLeft()
+                    + (cursor->position() - grabCursorPos)).toPoint());
+        grabbedView->sceneTree->setPosition(grabbedView->geometry.topLeft());
         return;
     } else if (cursorState == CursorState::ResizingWindow) {
         const QPointF &cursorPos = cursor->position();
@@ -413,7 +412,7 @@ void QBoxServer::processCursorMotion(uint32_t time)
             maxSize.setHeight(99999);
 
         auto currentGeoBox = grabbedView->xdgToplevel->getGeometry();
-        currentGeoBox.moveTopLeft((grabbedView->pos + currentGeoBox.topLeft()).toPoint());
+        currentGeoBox.moveTopLeft(grabbedView->geometry.topLeft() + currentGeoBox.topLeft());
         if (newGeoBox.width() < qMax(minimumSize, minSize.width()) || newGeoBox.width() > maxSize.width()) {
             newGeoBox.setLeft(currentGeoBox.left());
             newGeoBox.setRight(currentGeoBox.right());
@@ -424,10 +423,8 @@ void QBoxServer::processCursorMotion(uint32_t time)
             newGeoBox.setBottom(currentGeoBox.bottom());
         }
 
-        grabbedView->pos = newGeoBox.topLeft();
-        // TODO: remove pos
         grabbedView->geometry.setTopLeft(newGeoBox.topLeft().toPoint());
-        grabbedView->sceneTree->setPosition(grabbedView->pos.toPoint());
+        grabbedView->sceneTree->setPosition(grabbedView->geometry.topLeft());
         grabbedView->xdgToplevel->setSize(newGeoBox.size().toSize());
         return;
     }
@@ -483,7 +480,7 @@ void QBoxServer::beginInteractive(View *view, CursorState state, uint32_t edges)
     cursorState = state;
     grabCursorPos = cursor->position();
     grabGeoBox = view->xdgToplevel->getGeometry();
-    grabGeoBox.moveTopLeft(view->pos + grabGeoBox.topLeft());
+    grabGeoBox.moveTopLeft(view->geometry.topLeft() + grabGeoBox.topLeft());
     resizingEdges = edges;
 }
 

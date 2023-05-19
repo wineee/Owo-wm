@@ -83,7 +83,6 @@ private:
         QBoxServer *server;
         QWXdgToplevel *xdgToplevel;
         QWSceneTree *sceneTree;
-        QPointF pos;
 
         QWXdgToplevelDecorationV1 *decoration;
 
