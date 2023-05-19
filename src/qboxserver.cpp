@@ -124,9 +124,21 @@ void QBoxServer::onNewXdgSurface(wlr_xdg_surface *surface)
 
 void QBoxServer::onXdgToplevelMap()
 {
+    /* Called when the surface is mapped, or ready to display on-screen. */
     auto surface = qobject_cast<QWXdgSurface*>(sender());
     auto view = getView(surface);
     Q_ASSERT(view);
+
+    auto geoBox = view->xdgToplevel->getGeometry();
+    auto usableArea = getUsableArea(view);
+
+    view->geometry = {
+      0, // x
+      0, // y
+      std::min(geoBox.width(), usableArea.width()), // width
+      std::min(geoBox.height(), usableArea.height()) // height
+    };
+
     views.append(view);
     focusView(view, surface->handle()->surface);
 }
@@ -155,15 +167,57 @@ void QBoxServer::onXdgToplevelRequestResize(wlr_xdg_toplevel_resize_event *event
     beginInteractive(view, CursorState::ResizingWindow, event->edges);
 }
 
+QWOutput *QBoxServer::getActiveOutput(View *view)
+{
+    wlr_output *output = nullptr;
+    const QPointF center_p = view->geometry.toRectF().center();
+    QPointF closest_p = outputLayout->closestPoint(output, center_p);
+    return QWOutput::from(outputLayout->outputAt(closest_p));
+}
+
+QRect QBoxServer::getUsableArea(View *view)
+{
+    QRect usable_area{0, 0, 0, 0};
+    QWOutput *output = getActiveOutput(view);
+    usable_area.setSize(output->effectiveResolution());
+    return usable_area;
+}
+
 void QBoxServer::onXdgToplevelRequestMaximize(bool maximize)
 {
-    Q_UNUSED(maximize);
+    /* This event is raised when a client would like to maximize itself,
+     * typically because the user clicked on the maximize button on
+     * client-side decorations.
+    */
     auto surface = qobject_cast<QWXdgSurface*>(sender());
-    surface->scheduleConfigure();
+    auto view = getView(surface);
+
+    QRect usable_area = getUsableArea(view);
+
+    bool is_maximized = view->xdgToplevel->handle()->current.maximized;
+    if (!is_maximized) {
+         // struct wb_config *config = view->server->config;
+         view->previous_geometry = view->geometry;
+         view->previous_geometry.setWidth(view->xdgToplevel->handle()->current.width);
+         view->previous_geometry.setHeight(view->xdgToplevel->handle()->current.height);
+         view->geometry.setX(0);
+         view->geometry.setY(0);
+    } else {
+         usable_area = view->previous_geometry;
+         view->geometry.setTopLeft(view->previous_geometry.topLeft());
+    }
+
+    view->xdgToplevel->setSize(usable_area.size());
+    view->xdgToplevel->setMaximized(!is_maximized);
+    view->sceneTree->setPosition(view->geometry.topLeft());
+
+//    auto surface = qobject_cast<QWXdgSurface*>(sender());
+//    surface->scheduleConfigure();
 }
 
 void QBoxServer::onXdgToplevelRequestRequestFullscreen(bool fullscreen)
 {
+    /* Just as with request_maximize, we must send a configure here. */
     Q_UNUSED(fullscreen);
     auto surface = qobject_cast<QWXdgSurface*>(sender());
     surface->scheduleConfigure();
@@ -328,6 +382,8 @@ void QBoxServer::processCursorMotion(uint32_t time)
 {
     if (cursorState == CursorState::MovingWindow) {
         grabbedView->pos = grabGeoBox.topLeft() + (cursor->position() - grabCursorPos);
+        // TODO: remove pos
+        grabbedView->geometry.setTopLeft(grabbedView->pos.toPoint());
         grabbedView->sceneTree->setPosition(grabbedView->pos.toPoint());
         return;
     } else if (cursorState == CursorState::ResizingWindow) {
@@ -369,6 +425,8 @@ void QBoxServer::processCursorMotion(uint32_t time)
         }
 
         grabbedView->pos = newGeoBox.topLeft();
+        // TODO: remove pos
+        grabbedView->geometry.setTopLeft(newGeoBox.topLeft().toPoint());
         grabbedView->sceneTree->setPosition(grabbedView->pos.toPoint());
         grabbedView->xdgToplevel->setSize(newGeoBox.size().toSize());
         return;

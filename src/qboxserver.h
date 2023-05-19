@@ -86,6 +86,9 @@ private:
         QPointF pos;
 
         QWXdgToplevelDecorationV1 *decoration;
+
+        QRect geometry;
+        QRect previous_geometry;
     };
 
     enum class CursorState {
@@ -100,6 +103,8 @@ private:
     void focusView(View *view, wlr_surface *surface);
     void beginInteractive(View *view, CursorState state, uint32_t edges);
     bool handleKeybinding(xkb_keysym_t sym);
+    QRect getUsableArea(View *view);
+    QWOutput *getActiveOutput(View *view);
 
     QWDisplay *display;
     QWBackend *backend;
