@@ -2,6 +2,7 @@
 #define SERVER_H
 
 #include "qboxdecoration.h"
+#include "qboxcursor.h"
 
 #include <QRect>
 
@@ -45,6 +46,7 @@ class QBoxServer : public QObject
 {
     Q_OBJECT
     friend class QBoxDecoration;
+    friend class QBoxCursor;
 public:
     QBoxServer();
     ~QBoxServer();
@@ -61,12 +63,6 @@ private Q_SLOTS:
     void onXdgToplevelRequestMaximize(bool maximize);
     void onXdgToplevelRequestMinimize(bool minimize);
     void onXdgToplevelRequestRequestFullscreen(bool fullscreen);
-
-    void onCursorMotion(wlr_pointer_motion_event *event);
-    void onCursorMotionAbsolute(wlr_pointer_motion_absolute_event *event);
-    void onCursorButton(wlr_pointer_button_event *event);
-    void onCursorAxis(wlr_pointer_axis_event *event);
-    void onCursorFrame();
 
     void onNewInput(QWInputDevice *device);
     void onRequestSetCursor(wlr_seat_pointer_request_set_cursor_event *event);
@@ -91,17 +87,10 @@ private:
         QRect previous_geometry;
     };
 
-    enum class CursorState {
-        Normal,
-        MovingWindow,
-        ResizingWindow,
-    };
-
     static inline View *getView(const QWXdgSurface *surface);
     View *viewAt(const QPointF &pos, wlr_surface **surface, QPointF *spos) const;
-    void processCursorMotion(uint32_t time);
     void focusView(View *view, wlr_surface *surface);
-    void beginInteractive(View *view, CursorState state, uint32_t edges);
+    void beginInteractive(View *view, QBoxCursor::CursorState state, uint32_t edges);
     bool handleKeybinding(xkb_keysym_t sym);
     QRect getUsableArea(View *view);
     QWOutput *getActiveOutput(View *view);
@@ -127,9 +116,7 @@ private:
 
     QBoxDecoration *decoration;
 
-    QWCursor *cursor;
-    QWXCursorManager *cursorManager;
-    CursorState cursorState = CursorState::Normal;
+    QBoxCursor *cursor;
     uint32_t resizingEdges = 0;
 
     QList<QWKeyboard*> keyboards;
