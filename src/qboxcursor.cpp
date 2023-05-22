@@ -1,9 +1,10 @@
 #include "qboxcursor.h"
 #include "qboxserver.h"
+#include <qwseat.h>
 
 QBoxCursor::QBoxCursor(QBoxServer *server):
     m_service(server),
-    QObject(server)
+    QObject(nullptr)
 {
     m_cursor = new QWCursor(server);
     m_cursor->attachOutputLayout(server->outputLayout);
@@ -30,7 +31,7 @@ void QBoxCursor::onCursorMotionAbsolute(wlr_pointer_motion_absolute_event *event
 
 void QBoxCursor::onCursorButton(wlr_pointer_button_event *event)
 {
-    m_service->seat->pointerNotifyButton(event->time_msec, event->button, event->state);
+    getSeat()->pointerNotifyButton(event->time_msec, event->button, event->state);
     QPointF spos;
     wlr_surface *surface = nullptr;
     auto view = m_service->viewAt(m_cursor->position(), &surface, &spos);
@@ -43,7 +44,7 @@ void QBoxCursor::onCursorButton(wlr_pointer_button_event *event)
 
 void QBoxCursor::onCursorAxis(wlr_pointer_axis_event *event)
 {
-    m_service->seat->pointerNotifyAxis(event->time_msec, event->orientation,
+    getSeat()->pointerNotifyAxis(event->time_msec, event->orientation,
                                  event->delta, event->delta_discrete, event->source);
 }
 
@@ -55,7 +56,7 @@ void QBoxCursor::onCursorFrame()
      * same time, in which case a frame event won't be sent in between. */
 
     /* Notify the client with pointer focus of the frame event. */
-    m_service->seat->pointerNotifyFrame();
+    getSeat()->pointerNotifyFrame();
 }
 
 void QBoxCursor::processCursorMotion(uint32_t time)
@@ -119,9 +120,14 @@ void QBoxCursor::processCursorMotion(uint32_t time)
         m_cursorManager->setCursor("left_ptr", m_cursor);
 
     if (surface) {
-        m_service->seat->pointerNotifyEnter(surface, spos.x(), spos.y());
-        m_service->seat->pointerNotifyMotion(time, spos.x(), spos.y());
+        getSeat()->pointerNotifyEnter(surface, spos.x(), spos.y());
+        getSeat()->pointerNotifyMotion(time, spos.x(), spos.y());
     } else {
-        m_service->seat->pointerClearFocus();
+        getSeat()->pointerClearFocus();
     }
+}
+
+QWSeat *QBoxCursor::getSeat()
+{
+    return m_service->seat->m_seat;
 }

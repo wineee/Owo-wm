@@ -2,7 +2,7 @@ set(target qwlbox)
 set(QT_VERSION_MAJOR 6)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Gui)
 
-find_package(QWlroots REQUIRED)
+find_package(QWlroots 0.0.1 REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_search_module(WAYLAND_SERVER REQUIRED IMPORTED_TARGET wayland-server)
 pkg_search_module(WLROOTS REQUIRED IMPORTED_TARGET wlroots=0.16.2)

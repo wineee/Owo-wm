@@ -3,11 +3,13 @@
 
 #include <qwcursor.h>
 #include <qwxcursormanager.h>
+#include <qwseat.h>
 
 #include <QObject>
 
 using QW_NAMESPACE::QWCursor;
 using QW_NAMESPACE::QWXCursorManager;
+using QW_NAMESPACE::QWSeat;
 
 class QBoxServer;
 
@@ -15,6 +17,7 @@ class QBoxCursor : public QObject
 {
     Q_OBJECT
     friend class QBoxServer; // TODO : should be QBoxXdgShell
+    friend class QBoxSeat;
 
 public:
     explicit QBoxCursor(QBoxServer *parent = nullptr);
@@ -34,6 +37,7 @@ private Q_SLOTS:
 
 private:
     void processCursorMotion(uint32_t time);
+    QWSeat *getSeat();
 
     QWCursor *m_cursor;
     QWXCursorManager *m_cursorManager;

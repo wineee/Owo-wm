@@ -3,6 +3,7 @@
 
 #include "qboxdecoration.h"
 #include "qboxcursor.h"
+#include "qboxseat.h"
 
 #include <QRect>
 
@@ -47,6 +48,7 @@ class QBoxServer : public QObject
     Q_OBJECT
     friend class QBoxDecoration;
     friend class QBoxCursor;
+    friend class QBoxSeat;
 public:
     QBoxServer();
     ~QBoxServer();
@@ -63,14 +65,6 @@ private Q_SLOTS:
     void onXdgToplevelRequestMaximize(bool maximize);
     void onXdgToplevelRequestMinimize(bool minimize);
     void onXdgToplevelRequestRequestFullscreen(bool fullscreen);
-
-    void onNewInput(QWInputDevice *device);
-    void onRequestSetCursor(wlr_seat_pointer_request_set_cursor_event *event);
-    void onRequestSetSelection(wlr_seat_request_set_selection_event *event);
-
-    void onKeyboardModifiers();
-    void onKeyboardKey(wlr_keyboard_key_event *event);
-    void onKeyboardDestroy();
 
     void onOutputFrame();
 
@@ -91,7 +85,6 @@ private:
     View *viewAt(const QPointF &pos, wlr_surface **surface, QPointF *spos) const;
     void focusView(View *view, wlr_surface *surface);
     void beginInteractive(View *view, QBoxCursor::CursorState state, uint32_t edges);
-    bool handleKeybinding(xkb_keysym_t sym);
     QRect getUsableArea(View *view);
     QWOutput *getActiveOutput(View *view);
 
@@ -119,8 +112,7 @@ private:
     QBoxCursor *cursor;
     uint32_t resizingEdges = 0;
 
-    QList<QWKeyboard*> keyboards;
-    QWSeat *seat;
+    QBoxSeat *seat;
     QWSignalConnector sc;
 };
 

@@ -34,12 +34,11 @@ QBoxServer::QBoxServer()
     decoration = new QBoxDecoration(this);
 
     cursor = new QBoxCursor(this);
+    if (!cursor) {
+        qFatal("failed to create cursor");
+    }
 
-    connect(backend, &QWBackend::newInput, this, &QBoxServer::onNewInput);
-
-    seat = QWSeat::create(display, "seat0");
-    connect(seat, &QWSeat::requestSetCursor, this, &QBoxServer::onRequestSetCursor);
-    connect(seat, &QWSeat::requestSetSelection, this, &QBoxServer::onRequestSetSelection);
+    seat = new QBoxSeat(this);
 }
 
 QBoxServer::~QBoxServer()
@@ -53,7 +52,7 @@ bool QBoxServer::start()
     if (!socket) {
         return false;
     }
-
+Q_ASSERT(cursor);
     if (!backend->start())
         return false;
 
@@ -242,84 +241,6 @@ void QBoxServer::onXdgToplevelRequestRequestFullscreen(bool fullscreen)
     surface->scheduleConfigure();
 }
 
-
-void QBoxServer::onNewInput(QWInputDevice *device)
-{
-    if (QWKeyboard *keyboard = qobject_cast<QWKeyboard*>(device)) {
-
-        xkb_context *context = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
-        xkb_keymap *keymap = xkb_keymap_new_from_names(context, nullptr, XKB_KEYMAP_COMPILE_NO_FLAGS);
-
-        keyboard->setKeymap(keymap);
-        xkb_keymap_unref(keymap);
-        xkb_context_unref(context);
-        keyboard->setRepeatInfo(25, 600);
-
-        connect(keyboard, &QWKeyboard::modifiers, this, &QBoxServer::onKeyboardModifiers);
-        connect(keyboard, &QWKeyboard::key, this, &QBoxServer::onKeyboardKey);
-        connect(keyboard, &QWKeyboard::destroyed, this, &QBoxServer::onKeyboardDestroy);
-
-        seat->setKeyboard(keyboard);
-
-        Q_ASSERT(!keyboards.contains(keyboard));
-        keyboards.append(keyboard);
-    } else if (device->handle()->type == WLR_INPUT_DEVICE_POINTER) {
-        cursor->m_cursor->attachInputDevice(device);
-    }
-
-    uint32_t caps = WL_SEAT_CAPABILITY_POINTER;
-    if (!keyboards.isEmpty()) {
-        caps |= WL_SEAT_CAPABILITY_KEYBOARD;
-    }
-    seat->setCapabilities(caps);
-}
-
-void QBoxServer::onRequestSetCursor(wlr_seat_pointer_request_set_cursor_event *event)
-{
-    if (seat->handle()->pointer_state.focused_client == event->seat_client)
-        cursor->m_cursor->setSurface(event->surface, QPoint(event->hotspot_x, event->hotspot_y));
-}
-
-void QBoxServer::onRequestSetSelection(wlr_seat_request_set_selection_event *event)
-{
-    seat->setSelection(event->source, event->serial);
-}
-
-void QBoxServer::onKeyboardModifiers()
-{
-    QWKeyboard *keyboard = qobject_cast<QWKeyboard*>(QObject::sender());
-    seat->setKeyboard(keyboard);
-    seat->keyboardNotifyModifiers(&keyboard->handle()->modifiers);
-}
-
-void QBoxServer::onKeyboardKey(wlr_keyboard_key_event *event)
-{
-    QWKeyboard *keyboard = qobject_cast<QWKeyboard*>(QObject::sender());
-    /* Translate libinput keycode -> xkbcommon */
-    uint32_t keycode = event->keycode + 8;
-    const xkb_keysym_t *syms;
-    int nsyms = xkb_state_key_get_syms(keyboard->handle()->xkb_state, keycode, &syms);
-
-    bool handled = false;
-    uint32_t modifiers = keyboard->getModifiers();
-    if ((modifiers & (WLR_MODIFIER_ALT | WLR_MODIFIER_CTRL))
-            && event->state == WL_KEYBOARD_KEY_STATE_PRESSED) {
-        for (int i = 0; i < nsyms; i++)
-            handled = handleKeybinding(syms[i]);
-    }
-
-    if (!handled) {
-        seat->setKeyboard(keyboard);
-        seat->keyboardNotifyKey(event->time_msec, event->keycode, event->state);
-    }
-}
-
-void QBoxServer::onKeyboardDestroy()
-{
-    QWKeyboard *keyboard = qobject_cast<QWKeyboard*>(QObject::sender());
-    keyboards.removeOne(keyboard);
-}
-
 void QBoxServer::onOutputFrame()
 {
     auto output = qobject_cast<QWOutput*>(sender());
@@ -367,7 +288,7 @@ void QBoxServer::focusView(View *view, wlr_surface *surface)
     if (!view)
         return;
 
-    wlr_surface *prevSurface = seat->handle()->keyboard_state.focused_surface;
+    wlr_surface *prevSurface = seat->m_seat->handle()->keyboard_state.focused_surface;
     if (prevSurface == surface) {
         return;
     }
@@ -382,15 +303,15 @@ void QBoxServer::focusView(View *view, wlr_surface *surface)
     views.move(views.indexOf(view), 0);
     view->xdgToplevel->setActivated(true);
 
-    if (QWKeyboard *keyboard = seat->getKeyboard()) {
-        seat->keyboardNotifyEnter(view->xdgToplevel->handle()->base->surface,
+    if (QWKeyboard *keyboard = seat->m_seat->getKeyboard()) {
+        seat->m_seat->keyboardNotifyEnter(view->xdgToplevel->handle()->base->surface,
                                        keyboard->handle()->keycodes, keyboard->handle()->num_keycodes, &keyboard->handle()->modifiers);
     }
 }
 
 void QBoxServer::beginInteractive(View *view, QBoxCursor::CursorState state, uint32_t edges)
 {
-    wlr_surface *focusedSurface = seat->handle()->pointer_state.focused_surface;
+    wlr_surface *focusedSurface = seat->m_seat->handle()->pointer_state.focused_surface;
     if (view->xdgToplevel->handle()->base->surface !=
             wlr_surface_get_root_surface(focusedSurface)) {
         return;
@@ -403,22 +324,4 @@ void QBoxServer::beginInteractive(View *view, QBoxCursor::CursorState state, uin
     resizingEdges = edges;
 }
 
-bool QBoxServer::handleKeybinding(xkb_keysym_t sym)
-{
-    switch (sym) {
-    case XKB_KEY_Escape:
-        display->terminate();
-        qApp->exit();
-        break;
-    case XKB_KEY_F1:
-        if (views.size() < 2)
-            break;
-
-        focusView(views.at(1), views.at(1)->xdgToplevel->handle()->base->surface);
-        break;
-    default:
-        return false;
-    }
-    return true;
-}
 
