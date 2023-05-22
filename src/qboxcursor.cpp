@@ -7,7 +7,7 @@ QBoxCursor::QBoxCursor(QBoxServer *server):
     QObject(nullptr)
 {
     m_cursor = new QWCursor(server);
-    m_cursor->attachOutputLayout(server->outputLayout);
+    m_cursor->attachOutputLayout(server->output->outputLayout);
     m_cursorManager = QWXCursorManager::create(nullptr, 24);
     m_cursorManager->load(1);
     connect(m_cursor, &QWCursor::motion, this, &QBoxCursor::onCursorMotion);

@@ -4,6 +4,7 @@
 #include "qboxdecoration.h"
 #include "qboxcursor.h"
 #include "qboxseat.h"
+#include "qboxoutput.h"
 
 #include <QRect>
 
@@ -49,6 +50,9 @@ class QBoxServer : public QObject
     friend class QBoxDecoration;
     friend class QBoxCursor;
     friend class QBoxSeat;
+    friend class QBoxOutPut;
+    using View = QBoxOutPut::View;
+
 public:
     QBoxServer();
     ~QBoxServer();
@@ -56,7 +60,6 @@ public:
     bool start();
 
 private Q_SLOTS:
-    void onNewOutput(QWOutput *output);
     void onNewXdgSurface(wlr_xdg_surface *surface);
     void onXdgToplevelMap();
     void onXdgToplevelUnmap();
@@ -66,20 +69,7 @@ private Q_SLOTS:
     void onXdgToplevelRequestMinimize(bool minimize);
     void onXdgToplevelRequestRequestFullscreen(bool fullscreen);
 
-    void onOutputFrame();
-
 private:
-    struct View
-    {
-        QBoxServer *server;
-        QWXdgToplevel *xdgToplevel;
-        QWSceneTree *sceneTree;
-
-        QWXdgToplevelDecorationV1 *decoration;
-
-        QRect geometry;
-        QRect previous_geometry;
-    };
 
     static inline View *getView(const QWXdgSurface *surface);
     View *viewAt(const QPointF &pos, wlr_surface **surface, QPointF *spos) const;
@@ -97,8 +87,7 @@ private:
     QWSubcompositor *subcompositor;
     QWDataDeviceManager *dataDeviceManager;
 
-    QWOutputLayout *outputLayout;
-    QList<QWOutput*> outputs;
+    QBoxOutPut *output;
 
     QWScene *scene;
     QWXdgShell *xdgShell;

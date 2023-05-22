@@ -23,11 +23,10 @@ QBoxServer::QBoxServer()
     subcompositor = QWSubcompositor::create(display);
     dataDeviceManager = QWDataDeviceManager::create(display);
 
-    outputLayout = new QWOutputLayout(this);
-    connect(backend, &QWBackend::newOutput, this, &QBoxServer::onNewOutput);
+    output = new QBoxOutPut(this);
 
     scene = new QWScene(this);
-    scene->attachOutputLayout(outputLayout);
+    scene->attachOutputLayout(output->outputLayout);
     xdgShell = QWXdgShell::create(display, 3);
     connect(xdgShell, &QWXdgShell::newSurface, this, &QBoxServer::onNewXdgSurface);
 
@@ -52,7 +51,7 @@ bool QBoxServer::start()
     if (!socket) {
         return false;
     }
-Q_ASSERT(cursor);
+
     if (!backend->start())
         return false;
 
@@ -61,24 +60,6 @@ Q_ASSERT(cursor);
 
     display->start(qApp->thread());
     return true;
-}
-
-void QBoxServer::onNewOutput(QWOutput *output)
-{
-    Q_ASSERT(output);
-    outputs.append(output);
-
-    output->initRender(allocator, renderer);
-    if (!wl_list_empty(&output->handle()->modes)) {
-        auto *mode = output->preferredMode();
-        output->setMode(mode);
-        output->enable(true);
-        if (!output->commit())
-            return;
-    }
-
-    connect(output, &QWOutput::frame, this, &QBoxServer::onOutputFrame);
-    outputLayout->addAuto(output->handle());
 }
 
 void QBoxServer::onNewXdgSurface(wlr_xdg_surface *surface)
@@ -163,8 +144,8 @@ QWOutput *QBoxServer::getActiveOutput(View *view)
 {
     wlr_output *output = nullptr;
     const QPointF center_p = view->geometry.toRectF().center();
-    QPointF closest_p = outputLayout->closestPoint(output, center_p);
-    return QWOutput::from(outputLayout->outputAt(closest_p));
+    QPointF closest_p = this->output->outputLayout->closestPoint(output, center_p);
+    return QWOutput::from(this->output->outputLayout->outputAt(closest_p));
 }
 
 QRect QBoxServer::getUsableArea(View *view)
@@ -239,18 +220,6 @@ void QBoxServer::onXdgToplevelRequestRequestFullscreen(bool fullscreen)
     Q_UNUSED(fullscreen);
     auto surface = qobject_cast<QWXdgSurface*>(sender());
     surface->scheduleConfigure();
-}
-
-void QBoxServer::onOutputFrame()
-{
-    auto output = qobject_cast<QWOutput*>(sender());
-    Q_ASSERT(output);
-    auto sceneOutput = QWSceneOutput::from(scene, output);
-    sceneOutput->commit();
-
-    struct timespec now;
-    clock_gettime(CLOCK_MONOTONIC, &now);
-    sceneOutput->sendFrameDone(&now);
 }
 
 QBoxServer::View *QBoxServer::getView(const QWXdgSurface *surface)
