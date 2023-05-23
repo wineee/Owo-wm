@@ -28,6 +28,11 @@ public:
         ResizingWindow,
     };
 
+    void setCursorState(CursorState state);
+    QWCursor *getCursor() {
+        return m_cursor;
+    };
+
 private Q_SLOTS:
     void onCursorMotion(wlr_pointer_motion_event *event);
     void onCursorMotionAbsolute(wlr_pointer_motion_absolute_event *event);

@@ -19,7 +19,7 @@ class QBoxServer;
 class QBoxSeat : public QObject
 {
     Q_OBJECT
-    friend class QBoxServer;
+    friend class QBoxXdgShell;
     friend class QBoxCursor;
 public:
     explicit QBoxSeat(QBoxServer *server = nullptr);

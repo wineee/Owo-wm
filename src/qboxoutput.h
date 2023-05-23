@@ -14,8 +14,8 @@ class QBoxServer;
 class QBoxOutPut : public QObject
 {
     Q_OBJECT
-    friend class QBoxServer; // TODO : should be QBoxXdgShell
     friend class QBoxCursor;
+    friend class QBoxXdgShell;
 public:
     explicit QBoxOutPut(QBoxServer *server);
     struct View

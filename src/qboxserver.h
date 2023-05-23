@@ -5,6 +5,7 @@
 #include "qboxcursor.h"
 #include "qboxseat.h"
 #include "qboxoutput.h"
+#include "qboxxdgshell.h"
 
 #include <QRect>
 
@@ -51,6 +52,7 @@ class QBoxServer : public QObject
     friend class QBoxCursor;
     friend class QBoxSeat;
     friend class QBoxOutPut;
+    friend class QBoxXdgShell;
     using View = QBoxOutPut::View;
 
 public:
@@ -59,25 +61,7 @@ public:
 
     bool start();
 
-private Q_SLOTS:
-    void onNewXdgSurface(wlr_xdg_surface *surface);
-    void onXdgToplevelMap();
-    void onXdgToplevelUnmap();
-    void onXdgToplevelRequestMove(wlr_xdg_toplevel_move_event *);
-    void onXdgToplevelRequestResize(wlr_xdg_toplevel_resize_event *event);
-    void onXdgToplevelRequestMaximize(bool maximize);
-    void onXdgToplevelRequestMinimize(bool minimize);
-    void onXdgToplevelRequestRequestFullscreen(bool fullscreen);
-
 private:
-
-    static inline View *getView(const QWXdgSurface *surface);
-    View *viewAt(const QPointF &pos, wlr_surface **surface, QPointF *spos) const;
-    void focusView(View *view, wlr_surface *surface);
-    void beginInteractive(View *view, QBoxCursor::CursorState state, uint32_t edges);
-    QRect getUsableArea(View *view);
-    QWOutput *getActiveOutput(View *view);
-
     QWDisplay *display;
     QWBackend *backend;
     QWRenderer *renderer;
@@ -88,18 +72,11 @@ private:
     QWDataDeviceManager *dataDeviceManager;
 
     QBoxOutPut *output;
-
-    QWScene *scene;
-    QWXdgShell *xdgShell;
-    QList<View*> views;
-    View *grabbedView = nullptr;
-    QPointF grabCursorPos;
-    QRectF grabGeoBox;
+    QBoxXdgShell *xdgShell;
 
     QBoxDecoration *decoration;
 
     QBoxCursor *cursor;
-    uint32_t resizingEdges = 0;
 
     QBoxSeat *seat;
     QWSignalConnector sc;

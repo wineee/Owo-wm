@@ -31,6 +31,6 @@ void QBoxDecoration::onXdgDecorationMode()
     auto *toplevel_decoration = qobject_cast<QWXdgToplevelDecorationV1*>(QObject::sender());
     // do not support server-side decorations yet
     toplevel_decoration->setMode(WLR_XDG_TOPLEVEL_DECORATION_V1_MODE_CLIENT_SIDE);
-    if (!server->views.empty())
-      server->views.last()->decoration = toplevel_decoration;
+    if (!server->xdgShell->views.empty())
+      server->xdgShell->views.last()->decoration = toplevel_decoration;
 }

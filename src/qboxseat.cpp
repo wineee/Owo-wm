@@ -99,16 +99,16 @@ void QBoxSeat::onKeyboardDestroy()
 
 bool QBoxSeat::handleKeybinding(xkb_keysym_t sym)
 {
+    auto *xdgShell = m_server->xdgShell;
     switch (sym) {
     case XKB_KEY_Escape:
         m_server->display->terminate();
         qApp->exit();
         break;
     case XKB_KEY_F1:
-        if (m_server->views.size() < 2)
+        if (xdgShell->views.size() < 2)
             break;
-
-        m_server->focusView(m_server->views.at(1), m_server->views.at(1)->xdgToplevel->handle()->base->surface);
+        xdgShell->focusView(m_server->xdgShell->views.at(1), xdgShell->views.at(1)->xdgToplevel->handle()->base->surface);
         break;
     default:
         return false;

@@ -31,7 +31,7 @@ void QBoxOutPut::onOutputFrame()
 {
     auto output = qobject_cast<QWOutput*>(sender());
     Q_ASSERT(output);
-    auto sceneOutput = QWSceneOutput::from(m_server->scene, output);
+    auto sceneOutput = QWSceneOutput::from(m_server->xdgShell->getScene(), output);
     sceneOutput->commit();
 
     struct timespec now;
