@@ -24,16 +24,9 @@ QBoxServer::QBoxServer()
     dataDeviceManager = QWDataDeviceManager::create(display);
 
     output = new QBoxOutPut(this);
-
     xdgShell = new QBoxXdgShell(this);
-
     decoration = new QBoxDecoration(this);
-
     cursor = new QBoxCursor(this);
-    if (!cursor) {
-        qFatal("failed to create cursor");
-    }
-
     seat = new QBoxSeat(this);
 }
 

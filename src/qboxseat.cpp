@@ -7,7 +7,7 @@
 
 QBoxSeat::QBoxSeat(QBoxServer *server):
     m_server(server),
-    QObject(nullptr)
+    QObject(server)
 {
     connect(server->backend, &QWBackend::newInput, this, &QBoxSeat::onNewInput);
 

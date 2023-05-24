@@ -5,10 +5,10 @@ extern "C" {
 #include <wlr/types/wlr_xdg_decoration_v1.h>
 }
 
-QBoxDecoration::QBoxDecoration(QBoxServer *m_server):
-    server(m_server),
-    decoratManager(QWXdgDecorationManagerV1::create(m_server->display)),
-    QObject(nullptr)
+QBoxDecoration::QBoxDecoration(QBoxServer *server):
+    m_server(server),
+    decoratManager(QWXdgDecorationManagerV1::create(server->display)),
+    QObject(server)
 {
     if (decoratManager != nullptr) {
         connect(decoratManager, &QWXdgDecorationManagerV1::newToplevelDecoration, this, &QBoxDecoration::onNewToplevelDecoration);
@@ -31,6 +31,6 @@ void QBoxDecoration::onXdgDecorationMode()
     auto *toplevel_decoration = qobject_cast<QWXdgToplevelDecorationV1*>(QObject::sender());
     // do not support server-side decorations yet
     toplevel_decoration->setMode(WLR_XDG_TOPLEVEL_DECORATION_V1_MODE_CLIENT_SIDE);
-    if (!server->xdgShell->views.empty())
-      server->xdgShell->views.last()->decoration = toplevel_decoration;
+    if (!m_server->xdgShell->views.empty())
+      m_server->xdgShell->views.last()->decoration = toplevel_decoration;
 }

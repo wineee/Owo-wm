@@ -20,7 +20,7 @@ private Q_SLOTS:
 
 private:
     QWXdgDecorationManagerV1 *decoratManager;
-    QBoxServer *server;
+    QBoxServer *m_server;
 };
 
 #endif // QBOXDECORATION_H

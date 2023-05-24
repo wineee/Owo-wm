@@ -4,7 +4,7 @@
 
 QBoxCursor::QBoxCursor(QBoxServer *server):
     m_service(server),
-    QObject(nullptr)
+    QObject(server)
 {
     m_cursor = new QWCursor(server);
     m_cursor->attachOutputLayout(server->output->outputLayout);
