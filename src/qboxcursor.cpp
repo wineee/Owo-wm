@@ -68,12 +68,12 @@ void QBoxCursor::onCursorFrame()
 void QBoxCursor::processCursorMotion(uint32_t time)
 {
     auto *xdgShell = m_service->xdgShell;
-    auto *grabbedView = xdgShell->grabbedView;
-    QRectF grabGeoBox = xdgShell->grabGeoBox;
+    auto *grabbedView = m_service->grabbedView;
+    QRectF grabGeoBox = m_service->grabGeoBox;
     if (cursorState == CursorState::MovingWindow) {
         grabbedView->geometry.setTopLeft(
                     (grabGeoBox.topLeft()
-                    + (m_cursor->position() - xdgShell->grabCursorPos)).toPoint());
+                    + (m_cursor->position() - m_service->grabCursorPos)).toPoint());
         grabbedView->sceneTree->setPosition(grabbedView->geometry.topLeft());
         return;
     } else if (cursorState == CursorState::ResizingWindow) {
@@ -81,14 +81,14 @@ void QBoxCursor::processCursorMotion(uint32_t time)
         QRectF newGeoBox = grabGeoBox;
         const int minimumSize = 10;
 
-        if (xdgShell->resizingEdges & WLR_EDGE_TOP) {
+        if (m_service->resizingEdges & WLR_EDGE_TOP) {
             newGeoBox.setTop(cursorPos.y());
-        } else if (xdgShell->resizingEdges & WLR_EDGE_BOTTOM) {
+        } else if (m_service->resizingEdges & WLR_EDGE_BOTTOM) {
             newGeoBox.setBottom(cursorPos.y());
         }
-        if (xdgShell->resizingEdges & WLR_EDGE_LEFT) {
+        if (m_service->resizingEdges & WLR_EDGE_LEFT) {
             newGeoBox.setLeft(cursorPos.x());
-        } else if (xdgShell->resizingEdges & WLR_EDGE_RIGHT) {
+        } else if (m_service->resizingEdges & WLR_EDGE_RIGHT) {
             newGeoBox.setRight(cursorPos.x());
         }
 

@@ -30,7 +30,7 @@ void QBoxXdgShell::focusView(View *view, wlr_surface *surface)
     }
 
     view->sceneTree->raiseToTop();
-    views.move(views.indexOf(view), 0);
+    m_server->views.move(m_server->views.indexOf(view), 0);
     view->xdgToplevel->setActivated(true);
 
     if (QWKeyboard *keyboard = m_server->seat->m_seat->getKeyboard()) {
@@ -97,9 +97,9 @@ void QBoxXdgShell::onNewXdgSurface(wlr_xdg_surface *surface)
     connect(s, &QWXdgToplevel::requestMinimize, this, &QBoxXdgShell::onXdgToplevelRequestMinimize);
     connect(s, &QWXdgToplevel::requestFullscreen, this, &QBoxXdgShell::onXdgToplevelRequestRequestFullscreen);
     connect(s, &QWXdgToplevel::destroyed, this, [this, view] {
-        views.removeOne(view);
-        if (grabbedView == view)
-            grabbedView = nullptr;
+        m_server->views.removeOne(view);
+        if (m_server->grabbedView == view)
+            m_server->grabbedView = nullptr;
         delete view;
     });
 }
@@ -121,7 +121,7 @@ void QBoxXdgShell::onXdgToplevelMap()
       std::min(geoBox.height(), usableArea.height()) // height
     };
 
-    views.append(view);
+    m_server->views.append(view);
     focusView(view, surface->handle()->surface);
 }
 
@@ -130,7 +130,7 @@ void QBoxXdgShell::onXdgToplevelUnmap()
     auto surface = qobject_cast<QWXdgSurface*>(sender());
     auto view = getView(surface);
     Q_ASSERT(view);
-    views.removeOne(view);
+    m_server->views.removeOne(view);
 }
 
 void QBoxXdgShell::onXdgToplevelRequestMove(wlr_xdg_toplevel_move_event *)
@@ -230,12 +230,12 @@ void QBoxXdgShell::beginInteractive(View *view, QBoxCursor::CursorState state, u
             wlr_surface_get_root_surface(focusedSurface)) {
         return;
     }
-    grabbedView = view;
+    m_server->grabbedView = view;
     m_server->cursor->setCursorState(state);
-    grabCursorPos = m_server->cursor->getCursor()->position();
-    grabGeoBox = view->xdgToplevel->getGeometry();
-    grabGeoBox.moveTopLeft(view->geometry.topLeft() + grabGeoBox.topLeft());
-    resizingEdges = edges;
+    m_server->grabCursorPos = m_server->cursor->getCursor()->position();
+    m_server->grabGeoBox = view->xdgToplevel->getGeometry();
+    m_server->grabGeoBox.moveTopLeft(view->geometry.topLeft() + m_server->grabGeoBox.topLeft());
+    m_server->resizingEdges = edges;
 }
 
 QBoxXdgShell::View *QBoxXdgShell::getView(const QWXdgSurface *surface)

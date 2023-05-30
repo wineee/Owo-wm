@@ -106,9 +106,9 @@ bool QBoxSeat::handleKeybinding(xkb_keysym_t sym)
         qApp->exit();
         break;
     case XKB_KEY_F1:
-        if (xdgShell->views.size() < 2)
+        if (m_server->views.size() < 2)
             break;
-        xdgShell->focusView(m_server->xdgShell->views.at(1), xdgShell->views.at(1)->xdgToplevel->handle()->base->surface);
+        xdgShell->focusView(m_server->views.at(1), m_server->views.at(1)->xdgToplevel->handle()->base->surface);
         break;
     default:
         return false;

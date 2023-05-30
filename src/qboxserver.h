@@ -61,7 +61,6 @@ public:
 
     bool start();
 
-private:
     QWDisplay *display;
     QWBackend *backend;
     QWRenderer *renderer;
@@ -73,13 +72,16 @@ private:
 
     QBoxOutPut *output;
     QBoxXdgShell *xdgShell;
-
     QBoxDecoration *decoration;
-
     QBoxCursor *cursor;
-
     QBoxSeat *seat;
     QWSignalConnector sc;
+
+    QList<View*> views;
+    View *grabbedView = nullptr;
+    QPointF grabCursorPos;
+    QRectF grabGeoBox;
+    uint32_t resizingEdges = 0;
 };
 
 #endif // SERVER_H

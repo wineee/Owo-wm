@@ -45,15 +45,8 @@ private:
     void beginInteractive(View *view, QBoxCursor::CursorState state, uint32_t edges);
     QRect getUsableArea(View *view);
 
-
     QWScene *scene;
     QWXdgShell *xdgShell;
-
-    QList<View*> views;
-    View *grabbedView = nullptr;
-    QPointF grabCursorPos;
-    QRectF grabGeoBox;
-    uint32_t resizingEdges = 0;
 
     QBoxServer *m_server;
 };
