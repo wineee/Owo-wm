@@ -1,6 +1,8 @@
 #ifndef SERVER_H
 #define SERVER_H
 
+#define TITLEBAR_HEIGHT 8 /* TODO: Get this from the theme */
+
 #include "qboxdecoration.h"
 #include "qboxcursor.h"
 #include "qboxseat.h"

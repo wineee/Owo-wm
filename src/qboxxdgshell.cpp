@@ -18,23 +18,39 @@ void QBoxXdgShell::focusView(View *view, wlr_surface *surface)
     if (!view)
         return;
 
-    wlr_surface *prevSurface = m_server->seat->m_seat->handle()->keyboard_state.focused_surface;
+    auto *seat = m_server->seat->m_seat;
+    wlr_surface *prevSurface = seat->handle()->keyboard_state.focused_surface;
     if (prevSurface == surface) {
+        /* Don't re-focus an already focused surface. */
         return;
     }
     if (prevSurface) {
+        /*
+         * Deactivate the previously focused surface. This lets the client know
+         * it no longer has focus and the client will repaint accordingly, e.g.
+         * stop displaying a caret.
+         */
         auto previous = QWXdgSurface::from(prevSurface);
         auto toplevel = qobject_cast<QWXdgToplevel*>(previous);
         Q_ASSERT(toplevel);
         toplevel->setActivated(false);
     }
 
-    view->sceneTree->raiseToTop();
+    /* Move the view to the front */
+//   if (!seat->focused_layer) {
+        view->sceneTree->raiseToTop();
+//   }
     m_server->views.move(m_server->views.indexOf(view), 0);
+    /* Activate the new surface */
     view->xdgToplevel->setActivated(true);
 
-    if (QWKeyboard *keyboard = m_server->seat->m_seat->getKeyboard()) {
-        m_server->seat->m_seat->keyboardNotifyEnter(view->xdgToplevel->handle()->base->surface,
+    /*
+     * Tell the seat to have the keyboard enter this surface. wlroots will keep
+     * track of this and automatically send key events to the appropriate
+     * clients without additional work on your part.
+     */
+    if (QWKeyboard *keyboard = seat->getKeyboard()) {
+        seat->keyboardNotifyEnter(view->xdgToplevel->handle()->base->surface,
                                        keyboard->handle()->keycodes, keyboard->handle()->num_keycodes, &keyboard->handle()->modifiers);
     }
 }
@@ -49,6 +65,9 @@ QWOutput *QBoxXdgShell::getActiveOutput(View *view)
 
 QBoxXdgShell::View *QBoxXdgShell::viewAt(const QPointF &pos, wlr_surface **surface, QPointF *spos) const
 {
+    /* This returns the topmost node in the scene at the given layout coords.
+     * we only care about surface nodes as we are specifically looking for a
+     * surface in the surface tree of a qboxview. */
     auto node = scene->at(pos, spos);
     if (!node || node->type != WLR_SCENE_NODE_BUFFER) {
         return nullptr;
@@ -63,6 +82,8 @@ QBoxXdgShell::View *QBoxXdgShell::viewAt(const QPointF &pos, wlr_surface **surfa
         return nullptr;
 
     *surface = sceneSurface->surface;
+    /* Find the node corresponding to the `view` at the root of this
+     * surface tree, it is the only one for which we set the data field. */
     wlr_scene_tree *tree = node->parent;
     while (tree && !tree->node.data) {
         tree = tree->node.parent;
@@ -110,10 +131,14 @@ void QBoxXdgShell::onXdgToplevelMap()
     auto surface = qobject_cast<QWXdgSurface*>(sender());
     auto view = getView(surface);
     Q_ASSERT(view);
-
+    if (view->xdgToplevel->handle()->base->role != WLR_XDG_SURFACE_ROLE_TOPLEVEL)
+        return;
     auto geoBox = view->xdgToplevel->getGeometry();
     auto usableArea = getUsableArea(view);
 
+    /*
+     * TODO: config geometry
+     */
     view->geometry = {
       0, // x
       0, // y
@@ -121,8 +146,15 @@ void QBoxXdgShell::onXdgToplevelMap()
       std::min(geoBox.height(), usableArea.height()) // height
     };
 
-    m_server->views.append(view);
-    focusView(view, surface->handle()->surface);
+    m_server->views.append(view); // ?
+
+    /* A view no larger than a title bar shouldn't be sized or focused */
+    if (view->geometry.height() > TITLEBAR_HEIGHT &&
+            view->geometry.height() > TITLEBAR_HEIGHT * (usableArea.width()/usableArea.height())) {
+        view->xdgToplevel->setSize(view->geometry.size());
+        focusView(view, surface->handle()->surface);
+    }
+    view->sceneTree->setPosition(view->geometry.topLeft());
 }
 
 void QBoxXdgShell::onXdgToplevelUnmap()
@@ -130,7 +162,21 @@ void QBoxXdgShell::onXdgToplevelUnmap()
     auto surface = qobject_cast<QWXdgSurface*>(sender());
     auto view = getView(surface);
     Q_ASSERT(view);
-    m_server->views.removeOne(view);
+    if (view->xdgToplevel->handle()->base->role != WLR_XDG_SURFACE_ROLE_TOPLEVEL)
+        return;
+
+    qsizetype viewid = m_server->views.indexOf(view);
+    m_server->views.removeAt(viewid);
+
+    /* Focus the next view, if any. */
+    if (viewid >= m_server->views.size())
+        return;
+    auto *nextView = m_server->views.at(viewid);
+    if (nextView && nextView->sceneTree && nextView->sceneTree->handle()->node.enabled) {
+        wlr_log(WLR_INFO, "%s: %s", "Focusing next view",
+            nextView->xdgToplevel->handle()->app_id);
+         focusView(nextView, nextView->xdgToplevel->handle()->base->surface);
+    }
 }
 
 void QBoxXdgShell::onXdgToplevelRequestMove(wlr_xdg_toplevel_move_event *)
@@ -215,9 +261,13 @@ void QBoxXdgShell::onXdgToplevelRequestMinimize(bool minimize)
     view->sceneTree->setPosition(view->geometry.topLeft());
 }
 
-void QBoxXdgShell::onXdgToplevelRequestRequestFullscreen(bool fullscreen)
+void QBoxXdgShell::onXdgToplevelRequestRequestFullscreen(bool fullscreen) // TODO
 {
-    /* Just as with request_maximize, we must send a configure here. */
+    /* This event is raised when a client would like to set itself to
+     * fullscreen. qwlbox currently doesn't support fullscreen, but to
+     * conform to xdg-shell protocol we still must send a configure.
+     * wlr_xdg_surface_schedule_configure() is used to send an empty reply.
+     */
     Q_UNUSED(fullscreen);
     auto surface = qobject_cast<QWXdgSurface*>(sender());
     surface->scheduleConfigure();
@@ -225,6 +275,9 @@ void QBoxXdgShell::onXdgToplevelRequestRequestFullscreen(bool fullscreen)
 
 void QBoxXdgShell::beginInteractive(View *view, QBoxCursor::CursorState state, uint32_t edges)
 {
+    /* This function sets up an interactive move or resize operation, where the
+     * compositor stops propagating pointer events to clients and instead
+     * consumes them itself, to move or resize windows. */
     wlr_surface *focusedSurface = m_server->seat->m_seat->handle()->pointer_state.focused_surface;
     if (view->xdgToplevel->handle()->base->surface !=
             wlr_surface_get_root_surface(focusedSurface)) {
