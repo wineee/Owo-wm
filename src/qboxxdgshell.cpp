@@ -94,15 +94,25 @@ QBoxXdgShell::View *QBoxXdgShell::viewAt(const QPointF &pos, wlr_surface **surfa
 
 void QBoxXdgShell::onNewXdgSurface(wlr_xdg_surface *surface)
 {
+    /* This event is raised when wlr_xdg_shell receives a new xdg surface from a
+     * client, either a toplevel (application window) or popup. */
+
+    /* We must add xdg popups to the scene graph so they get rendered. The
+     * wlroots scene graph provides a helper for this, but to use it we must
+     * provide the proper parent scene node of the xdg popup. To enable this,
+     * we always set the user data field of xdg_surfaces to the corresponding
+     * scene node. */
     if (surface->role == WLR_XDG_SURFACE_ROLE_POPUP) {
         auto *s = QWXdgPopup::from(surface->popup);
         auto parent = QWXdgSurface::from(surface->popup->parent);
         QWSceneTree *parentTree = reinterpret_cast<QWSceneTree*>(parent->handle()->data);
         surface->data = QWScene::xdgSurfaceCreate(parentTree, s);
+        // TODO:: map/unmap for popups?
         return;
     }
     Q_ASSERT(surface->role == WLR_XDG_SURFACE_ROLE_TOPLEVEL);
 
+    /* Allocate a View for this surface */
     auto view = new View();
     view->server = m_server;
     auto s = QWXdgToplevel::from(surface->toplevel);
@@ -110,8 +120,10 @@ void QBoxXdgShell::onNewXdgSurface(wlr_xdg_surface *surface)
     view->sceneTree = QWScene::xdgSurfaceCreate(scene, s);
     view->sceneTree->handle()->node.data = view;
     surface->data = view->sceneTree;
+    /* Listen to the various events it can emit */
     connect(s, &QWXdgSurface::map, this, &QBoxXdgShell::onXdgToplevelMap);
     connect(s, &QWXdgSurface::unmap, this, &QBoxXdgShell::onXdgToplevelUnmap);
+    connect(s, &QWXdgSurface::newPopup, this, &QBoxXdgShell::onXdgToplevelNewPopup);
     connect(s, &QWXdgToplevel::requestMove, this, &QBoxXdgShell::onXdgToplevelRequestMove);
     connect(s, &QWXdgToplevel::requestResize, this, &QBoxXdgShell::onXdgToplevelRequestResize);
     connect(s, &QWXdgToplevel::requestMaximize, this, &QBoxXdgShell::onXdgToplevelRequestMaximize);
@@ -179,8 +191,33 @@ void QBoxXdgShell::onXdgToplevelUnmap()
     }
 }
 
+void QBoxXdgShell::onXdgToplevelNewPopup(QWXdgPopup *popup)
+{
+    auto surface = qobject_cast<QWXdgSurface*>(sender());
+    auto view = getView(surface);
+    Q_ASSERT(view);
+    QPointF outputPos = view->geometry.topLeft() + popup->getGeometry().topLeft();
+    auto *woutput = m_server->output->outputLayout->outputAt(outputPos); // TODO
+
+    if (!woutput) {
+        return;
+    }
+    auto *qoutput = reinterpret_cast<QBoxOutPut*>(woutput->data);
+
+    int topMargin = 0; // TODO: read from config
+
+    QRect outputToplevelBox = qoutput->geometry;
+    outputToplevelBox.moveTopLeft(outputToplevelBox.topLeft() - view->geometry.topLeft());
+    outputToplevelBox.setHeight(outputToplevelBox.height() - topMargin);
+    popup->unconstrainFromBox(outputToplevelBox);
+}
+
+
 void QBoxXdgShell::onXdgToplevelRequestMove(wlr_xdg_toplevel_move_event *)
 {
+    /* This event is raised when a client would like to begin an interactive
+     * move, typically because the user clicked on their client-side
+     * decorations. */
     auto surface = qobject_cast<QWXdgSurface*>(sender());
     auto view = getView(surface);
     Q_ASSERT(view);
@@ -189,6 +226,9 @@ void QBoxXdgShell::onXdgToplevelRequestMove(wlr_xdg_toplevel_move_event *)
 
 void QBoxXdgShell::onXdgToplevelRequestResize(wlr_xdg_toplevel_resize_event *event)
 {
+    /* This event is raised when a client would like to begin an interactive
+     * resize, typically because the user clicked on their client-side
+     * decorations. */
     auto surface = qobject_cast<QWXdgSurface*>(sender());
     auto view = getView(surface);
     Q_ASSERT(view);
@@ -279,12 +319,15 @@ void QBoxXdgShell::beginInteractive(View *view, QBoxCursor::CursorState state, u
      * compositor stops propagating pointer events to clients and instead
      * consumes them itself, to move or resize windows. */
     wlr_surface *focusedSurface = m_server->seat->m_seat->handle()->pointer_state.focused_surface;
+
+    /* Deny move/resize requests from unfocused clients. */
     if (view->xdgToplevel->handle()->base->surface !=
             wlr_surface_get_root_surface(focusedSurface)) {
         return;
     }
     m_server->grabbedView = view;
     m_server->cursor->setCursorState(state);
+
     m_server->grabCursorPos = m_server->cursor->getCursor()->position();
     m_server->grabGeoBox = view->xdgToplevel->getGeometry();
     m_server->grabGeoBox.moveTopLeft(view->geometry.topLeft() + m_server->grabGeoBox.topLeft());

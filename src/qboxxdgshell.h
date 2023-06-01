@@ -7,7 +7,8 @@
 #include <qwxdgshell.h>
 #include <QObject>
 
-using QW_NAMESPACE::QWScene, QW_NAMESPACE::QWXdgShell, QW_NAMESPACE::QWXdgSurface;
+using QW_NAMESPACE::QWScene, QW_NAMESPACE::QWXdgShell;
+using QW_NAMESPACE::QWXdgPopup, QW_NAMESPACE::QWXdgSurface;
 
 class QBoxServer;
 
@@ -34,6 +35,7 @@ private Q_SLOTS:
     void onNewXdgSurface(wlr_xdg_surface *surface);
     void onXdgToplevelMap();
     void onXdgToplevelUnmap();
+    void onXdgToplevelNewPopup(QWXdgPopup *popup);
     void onXdgToplevelRequestMove(wlr_xdg_toplevel_move_event *);
     void onXdgToplevelRequestResize(wlr_xdg_toplevel_resize_event *event);
     void onXdgToplevelRequestMaximize(bool maximize);
