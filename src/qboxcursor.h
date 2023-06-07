@@ -7,9 +7,7 @@
 
 #include <QObject>
 
-using QW_NAMESPACE::QWCursor;
-using QW_NAMESPACE::QWXCursorManager;
-using QW_NAMESPACE::QWSeat;
+QW_USE_NAMESPACE
 
 class QBoxServer;
 
@@ -47,6 +45,7 @@ private:
     QWCursor *m_cursor;
     QWXCursorManager *m_cursorManager;
     CursorState cursorState = CursorState::Normal;
+
     QBoxServer *m_service;
 };
 
