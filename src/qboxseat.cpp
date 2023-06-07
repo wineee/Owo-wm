@@ -20,7 +20,7 @@ QBoxSeat::QBoxSeat(QBoxServer *server):
 void QBoxSeat::onRequestSetCursor(wlr_seat_pointer_request_set_cursor_event *event)
 {
     if (m_seat->handle()->pointer_state.focused_client == event->seat_client)
-        m_server->cursor->m_cursor->setSurface(event->surface, QPoint(event->hotspot_x, event->hotspot_y));
+        m_server->cursor->m_cursor->setSurface(QWSurface::from(event->surface), QPoint(event->hotspot_x, event->hotspot_y));
 }
 
 void QBoxSeat::onRequestSetSelection(wlr_seat_request_set_selection_event *event)

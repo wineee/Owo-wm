@@ -1,5 +1,6 @@
 #include "qboxxdgshell.h"
 #include "qboxserver.h"
+#include "qwconfig.h"
 
 #include <qwdisplay.h>
 
@@ -30,7 +31,7 @@ void QBoxXdgShell::focusView(View *view, wlr_surface *surface)
          * it no longer has focus and the client will repaint accordingly, e.g.
          * stop displaying a caret.
          */
-        auto previous = QWXdgSurface::from(prevSurface);
+        auto previous = QWXdgSurface::from(QWSurface::from(prevSurface));
         auto toplevel = qobject_cast<QWXdgToplevel*>(previous);
         Q_ASSERT(toplevel);
         toplevel->setActivated(false);
@@ -50,7 +51,7 @@ void QBoxXdgShell::focusView(View *view, wlr_surface *surface)
      * clients without additional work on your part.
      */
     if (QWKeyboard *keyboard = seat->getKeyboard()) {
-        seat->keyboardNotifyEnter(view->xdgToplevel->handle()->base->surface,
+        seat->keyboardNotifyEnter(QWSurface::from(view->xdgToplevel->handle()->base->surface),
                                        keyboard->handle()->keycodes, keyboard->handle()->num_keycodes, &keyboard->handle()->modifiers);
     }
 }
@@ -104,7 +105,7 @@ void QBoxXdgShell::onNewXdgSurface(wlr_xdg_surface *surface)
      * scene node. */
     if (surface->role == WLR_XDG_SURFACE_ROLE_POPUP) {
         auto *s = QWXdgPopup::from(surface->popup);
-        auto parent = QWXdgSurface::from(surface->popup->parent);
+        auto parent = QWXdgSurface::from(QWSurface::from(surface->popup->parent));
         QWSceneTree *parentTree = reinterpret_cast<QWSceneTree*>(parent->handle()->data);
         surface->data = QWScene::xdgSurfaceCreate(parentTree, s);
         // TODO:: map/unmap for popups?

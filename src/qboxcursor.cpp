@@ -127,7 +127,7 @@ void QBoxCursor::processCursorMotion(uint32_t time)
         m_cursorManager->setCursor("left_ptr", m_cursor);
 
     if (surface) {
-        getSeat()->pointerNotifyEnter(surface, spos.x(), spos.y());
+        getSeat()->pointerNotifyEnter(QWSurface::from(surface), spos.x(), spos.y());
         getSeat()->pointerNotifyMotion(time, spos.x(), spos.y());
     } else {
         getSeat()->pointerClearFocus();
