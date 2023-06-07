@@ -40,6 +40,9 @@ private Q_SLOTS:
 
 private:
     void processCursorMotion(uint32_t time);
+    void processCursorMove();
+    void processCursorResize();
+
     QWSeat *getSeat();
 
     QWCursor *m_cursor;

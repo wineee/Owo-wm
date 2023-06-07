@@ -82,71 +82,102 @@ void QBoxCursor::onCursorFrame()
 
 void QBoxCursor::processCursorMotion(uint32_t time)
 {
-    auto *xdgShell = m_service->xdgShell;
-    auto *grabbedView = m_service->grabbedView;
-    QRectF grabGeoBox = m_service->grabGeoBox;
+    /* If the mode is non-passthrough, delegate to those functions. */
     if (cursorState == CursorState::MovingWindow) {
-        grabbedView->geometry.setTopLeft(
-                    (grabGeoBox.topLeft()
-                    + (m_cursor->position() - m_service->grabCursorPos)).toPoint());
-        grabbedView->sceneTree->setPosition(grabbedView->geometry.topLeft());
+        processCursorMove();
         return;
     } else if (cursorState == CursorState::ResizingWindow) {
-        const QPointF &cursorPos = m_cursor->position();
-        QRectF newGeoBox = grabGeoBox;
-        const int minimumSize = 10;
-
-        if (m_service->resizingEdges & WLR_EDGE_TOP) {
-            newGeoBox.setTop(cursorPos.y());
-        } else if (m_service->resizingEdges & WLR_EDGE_BOTTOM) {
-            newGeoBox.setBottom(cursorPos.y());
-        }
-        if (m_service->resizingEdges & WLR_EDGE_LEFT) {
-            newGeoBox.setLeft(cursorPos.x());
-        } else if (m_service->resizingEdges & WLR_EDGE_RIGHT) {
-            newGeoBox.setRight(cursorPos.x());
-        }
-
-        QSize minSize(grabbedView->xdgToplevel->handle()->current.min_width,
-                      grabbedView->xdgToplevel->handle()->current.min_height);
-        QSize maxSize(grabbedView->xdgToplevel->handle()->current.max_width,
-                      grabbedView->xdgToplevel->handle()->current.max_height);
-
-        if (maxSize.width() == 0)
-            maxSize.setWidth(99999);
-        if (maxSize.height() == 0)
-            maxSize.setHeight(99999);
-
-        auto currentGeoBox = grabbedView->xdgToplevel->getGeometry();
-        currentGeoBox.moveTopLeft(grabbedView->geometry.topLeft() + currentGeoBox.topLeft());
-        if (newGeoBox.width() < qMax(minimumSize, minSize.width()) || newGeoBox.width() > maxSize.width()) {
-            newGeoBox.setLeft(currentGeoBox.left());
-            newGeoBox.setRight(currentGeoBox.right());
-        }
-
-        if (newGeoBox.height() < qMax(minimumSize, minSize.height()) || newGeoBox.height() > maxSize.height()) {
-            newGeoBox.setTop(currentGeoBox.top());
-            newGeoBox.setBottom(currentGeoBox.bottom());
-        }
-
-        grabbedView->geometry.setTopLeft(newGeoBox.topLeft().toPoint());
-        grabbedView->sceneTree->setPosition(grabbedView->geometry.topLeft());
-        grabbedView->xdgToplevel->setSize(newGeoBox.size().toSize());
+        processCursorResize();
         return;
     }
 
+    /* Otherwise, find the view under the pointer and send the event along. */
     wlr_surface *surface = nullptr;
     QPointF spos;
-    auto view = xdgShell->viewAt(m_cursor->position(), &surface, &spos);
+    auto view = m_service->xdgShell->viewAt(m_cursor->position(), &surface, &spos);
+
+    /* If there's no view under the cursor, set the cursor image to a
+     * default. This is what makes the cursor image appear when you move it
+     * around the screen, not over any views. */
     if (!view)
-        m_cursorManager->setCursor("left_ptr", m_cursor);
+        m_cursorManager->setCursor("default", m_cursor);
 
     if (surface) {
+        /*
+         * "Enter" the surface if necessary. This lets the client know that the
+         * cursor has entered one of its surfaces.
+         *
+         * Note that wlroots will avoid sending duplicate enter/motion events if
+         * the surface has already has pointer focus or if the client is already
+         * aware of the coordinates passed.
+         */
         getSeat()->pointerNotifyEnter(QWSurface::from(surface), spos.x(), spos.y());
         getSeat()->pointerNotifyMotion(time, spos.x(), spos.y());
     } else {
+        /* Clear pointer focus so future button events and such are not sent to
+         * the last client to have the cursor over it. */
         getSeat()->pointerClearFocus();
     }
+
+    // TODO: wlr_idle_notifier_v1_notify_activity
+}
+
+void QBoxCursor::processCursorMove()
+{
+    /* Move the grabbed view to the new position. */
+    auto *grabbedView = m_service->grabbedView;
+    QRectF grabGeoBox = m_service->grabGeoBox;
+
+    if (grabbedView->sceneTree->handle()->node.type == WLR_SCENE_NODE_TREE) {
+        grabbedView->geometry.setTopLeft((grabGeoBox.topLeft() + m_cursor->position() - m_service->grabCursorPos).toPoint());
+        grabbedView->sceneTree->setPosition(grabbedView->geometry.topLeft());
+    };
+}
+
+void QBoxCursor::processCursorResize()
+{
+    auto *grabbedView = m_service->grabbedView;
+    const QPointF &cursorPos = m_cursor->position();
+    QRectF newGeoBox = m_service->grabGeoBox;
+    const int minimumSize = 10;
+
+    // FIXME: Left May > Right
+    if (m_service->resizingEdges & WLR_EDGE_TOP) {
+        newGeoBox.setTop(cursorPos.y());
+    } else if (m_service->resizingEdges & WLR_EDGE_BOTTOM) {
+        newGeoBox.setBottom(cursorPos.y());
+    }
+    if (m_service->resizingEdges & WLR_EDGE_LEFT) {
+        newGeoBox.setLeft(cursorPos.x());
+    } else if (m_service->resizingEdges & WLR_EDGE_RIGHT) {
+        newGeoBox.setRight(cursorPos.x());
+    }
+
+    QSize minSize(grabbedView->xdgToplevel->handle()->current.min_width,
+                  grabbedView->xdgToplevel->handle()->current.min_height);
+    QSize maxSize(grabbedView->xdgToplevel->handle()->current.max_width,
+                  grabbedView->xdgToplevel->handle()->current.max_height);
+
+    if (maxSize.width() == 0)
+        maxSize.setWidth(99999);
+    if (maxSize.height() == 0)
+        maxSize.setHeight(99999);
+
+    auto currentGeoBox = grabbedView->xdgToplevel->getGeometry();
+    currentGeoBox.moveTopLeft(grabbedView->geometry.topLeft() + currentGeoBox.topLeft());
+    if (newGeoBox.width() < qMax(minimumSize, minSize.width()) || newGeoBox.width() > maxSize.width()) {
+        newGeoBox.setLeft(currentGeoBox.left());
+        newGeoBox.setRight(currentGeoBox.right());
+    }
+
+    if (newGeoBox.height() < qMax(minimumSize, minSize.height()) || newGeoBox.height() > maxSize.height()) {
+        newGeoBox.setTop(currentGeoBox.top());
+        newGeoBox.setBottom(currentGeoBox.bottom());
+    }
+    grabbedView->geometry.setTopLeft(newGeoBox.topLeft().toPoint());
+
+    grabbedView->sceneTree->setPosition(grabbedView->geometry.topLeft());
+    grabbedView->xdgToplevel->setSize(newGeoBox.size().toSize());
 }
 
 QWSeat *QBoxCursor::getSeat()
