@@ -40,20 +40,31 @@ void QBoxCursor::onCursorMotionAbsolute(wlr_pointer_motion_absolute_event *event
 
 void QBoxCursor::onCursorButton(wlr_pointer_button_event *event)
 {
+    /* This event is forwarded by the cursor when a pointer emits a button
+     * event. */
     auto *xdgShell = m_service->xdgShell;
+    /* Notify the client with pointer focus that a button press has occurred */
     getSeat()->pointerNotifyButton(event->time_msec, event->button, event->state);
     QPointF spos;
     wlr_surface *surface = nullptr;
     auto view = xdgShell->viewAt(m_cursor->position(), &surface, &spos);
     if (event->state == WLR_BUTTON_RELEASED) {
+        /* If you released any buttons, we exit interactive move/resize mode. */
         cursorState = CursorState::Normal;
-    } else {
+    } else { /// WLR_BUTTON_PRESSED
+        /* Focus that client if the button was _pressed_ */
         xdgShell->focusView(view, surface);
     }
+
+    // TODO: wlr_idle_notifier_v1_notify_activity
 }
 
 void QBoxCursor::onCursorAxis(wlr_pointer_axis_event *event)
 {
+    /* This event is forwarded by the cursor when a pointer emits an axis event,
+     * for example when you move the scroll wheel. */
+
+    /* Notify the client with pointer focus of the axis event. */
     getSeat()->pointerNotifyAxis(event->time_msec, event->orientation,
                                  event->delta, event->delta_discrete, event->source);
 }
