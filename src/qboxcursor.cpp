@@ -11,7 +11,7 @@ QBoxCursor::QBoxCursor(QBoxServer *server):
     bool sizeIsOk = false;
     uint32_t xcursor_size = qEnvironmentVariableIntValue("XCURSOR_SIZE", &sizeIsOk);
     if (!sizeIsOk)
-        xcursor_size = 240;
+        xcursor_size = 24;
     m_cursorManager = QWXCursorManager::create(getenv("XCURSOR_THEME"), xcursor_size);
     m_cursorManager->load(1);
     connect(m_cursor, &QWCursor::motion, this, &QBoxCursor::onCursorMotion);
