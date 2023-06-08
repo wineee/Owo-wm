@@ -44,6 +44,11 @@
               export WAYLAND_DEBUG=1
             '';
           };
+
+          apps.${system}.default = {
+            type = "app";
+            program = packages.default;
+          };
         }
       );
 }
