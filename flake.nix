@@ -19,8 +19,7 @@
         let
           pkgs = nixpkgs.legacyPackages.${system};
           qwlbox = pkgs.qt6Packages.callPackage ./nix {
-            qwlroots = qwlroots.packages.${system}.qwlroots-qt6;
-            wlroots = pkgs.wlroots_0_16;
+            qwlroots = qwlroots.packages.${system}.qwlroots-qt6-wlroots-git;
             nix-filter = nix-filter.lib;
           };
         in
@@ -28,10 +27,15 @@
           packages.default = qwlbox;
 
           devShell = pkgs.mkShell { 
-            nativeBuildInputs = packages.default.nativeBuildInputs ++ (with pkgs; [
+            packages = with pkgs; [
               wayland-utils
-            ]);
-            inherit (packages.default) buildInputs;
+              foot
+              weston
+            ];
+
+            inputsFrom = [
+              packages.default
+            ];
 
             shellHook = ''
               echo "welcome to qwlbox"

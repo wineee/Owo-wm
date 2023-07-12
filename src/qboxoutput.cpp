@@ -32,7 +32,7 @@ void QBoxOutPut::onOutputFrame()
     auto output = qobject_cast<QWOutput*>(sender());
     Q_ASSERT(output);
     auto sceneOutput = QWSceneOutput::from(m_server->xdgShell->getScene(), output);
-    sceneOutput->commit();
+    sceneOutput->commit(nullptr);
 
     struct timespec now;
     clock_gettime(CLOCK_MONOTONIC, &now);

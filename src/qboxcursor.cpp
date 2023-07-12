@@ -100,7 +100,7 @@ void QBoxCursor::processCursorMotion(uint32_t time)
      * default. This is what makes the cursor image appear when you move it
      * around the screen, not over any views. */
     if (!view)
-        m_cursorManager->setCursor("default", m_cursor);
+	m_cursor->setXCursor(m_cursorManager, "default");
 
     if (surface) {
         /*

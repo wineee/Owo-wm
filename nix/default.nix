@@ -6,7 +6,6 @@
 , pkg-config
 , qtbase
 , wrapQtAppsHook
-, wlroots
 , wayland
 , wayland-protocols
 , wayland-scanner
@@ -44,7 +43,6 @@ stdenv.mkDerivation rec {
   buildInputs = [
     qtbase
     qwlroots
-    wlroots
     wayland
     wayland-protocols
     pixman
