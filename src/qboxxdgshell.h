@@ -33,8 +33,8 @@ public:
 
 private Q_SLOTS:
     void onNewXdgSurface(wlr_xdg_surface *surface);
-    void onXdgToplevelMap();
-    void onXdgToplevelUnmap();
+    void onMap();
+    void onUnmap();
     void onXdgToplevelNewPopup(QWXdgPopup *popup);
     void onXdgToplevelRequestMove(wlr_xdg_toplevel_move_event *);
     void onXdgToplevelRequestResize(wlr_xdg_toplevel_resize_event *event);

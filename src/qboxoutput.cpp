@@ -18,13 +18,13 @@ void QBoxOutPut::onNewOutput(QWOutput *output)
     if (!wl_list_empty(&output->handle()->modes)) {
         auto *mode = output->preferredMode();
         output->setMode(mode);
-        output->enable(true);
-        if (!output->commit())
-            return;
     }
+    output->enable(true);
+    if (!output->commit())
+        return;
 
     connect(output, &QWOutput::frame, this, &QBoxOutPut::onOutputFrame);
-    outputLayout->addAuto(output->handle());
+    outputLayout->addAuto(output);
 }
 
 void QBoxOutPut::onOutputFrame()

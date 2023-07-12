@@ -3,6 +3,8 @@
 #include "qwconfig.h"
 
 #include <qwdisplay.h>
+#include <qwoutput.h>
+#include <qwxdgshell.h>
 
 QBoxXdgShell::QBoxXdgShell(QBoxServer *server):
     m_server(server),
@@ -58,10 +60,9 @@ void QBoxXdgShell::focusView(View *view, wlr_surface *surface)
 
 QWOutput *QBoxXdgShell::getActiveOutput(View *view)
 {
-    wlr_output *output = nullptr;
     const QPointF center_p = view->geometry.toRectF().center();
-    QPointF closest_p = m_server->output->outputLayout->closestPoint(output, center_p);
-    return QWOutput::from(m_server->output->outputLayout->outputAt(closest_p));
+    QPointF closest_p = m_server->output->outputLayout->closestPoint(nullptr, center_p);
+    return m_server->output->outputLayout->outputAt(closest_p);
 }
 
 QBoxXdgShell::View *QBoxXdgShell::viewAt(const QPointF &pos, wlr_surface **surface, QPointF *spos) const
@@ -122,8 +123,8 @@ void QBoxXdgShell::onNewXdgSurface(wlr_xdg_surface *surface)
     view->sceneTree->handle()->node.data = view;
     surface->data = view->sceneTree;
     /* Listen to the various events it can emit */
-    connect(s, &QWXdgSurface::map, this, &QBoxXdgShell::onXdgToplevelMap);
-    connect(s, &QWXdgSurface::unmap, this, &QBoxXdgShell::onXdgToplevelUnmap);
+    connect(s->surface(), &QWSurface::map, this, &QBoxXdgShell::onMap);
+    connect(s->surface(), &QWSurface::unmap, this, &QBoxXdgShell::onUnmap);
     connect(s, &QWXdgSurface::newPopup, this, &QBoxXdgShell::onXdgToplevelNewPopup);
     connect(s, &QWXdgToplevel::requestMove, this, &QBoxXdgShell::onXdgToplevelRequestMove);
     connect(s, &QWXdgToplevel::requestResize, this, &QBoxXdgShell::onXdgToplevelRequestResize);
@@ -138,10 +139,12 @@ void QBoxXdgShell::onNewXdgSurface(wlr_xdg_surface *surface)
     });
 }
 
-void QBoxXdgShell::onXdgToplevelMap()
+void QBoxXdgShell::onMap()
 {
     /* Called when the surface is mapped, or ready to display on-screen. */
-    auto surface = qobject_cast<QWXdgSurface*>(sender());
+    auto *surface = QWXdgSurface::from(qobject_cast<QWSurface*>(sender()));
+    if (!surface)
+        return;
     auto view = getView(surface);
     Q_ASSERT(view);
     if (view->xdgToplevel->handle()->base->role != WLR_XDG_SURFACE_ROLE_TOPLEVEL)
@@ -170,9 +173,11 @@ void QBoxXdgShell::onXdgToplevelMap()
     view->sceneTree->setPosition(view->geometry.topLeft());
 }
 
-void QBoxXdgShell::onXdgToplevelUnmap()
+void QBoxXdgShell::onUnmap()
 {
-    auto surface = qobject_cast<QWXdgSurface*>(sender());
+    auto *surface = QWXdgSurface::from(qobject_cast<QWSurface*>(sender()));
+    if (!surface)
+        return;
     auto view = getView(surface);
     Q_ASSERT(view);
     if (view->xdgToplevel->handle()->base->role != WLR_XDG_SURFACE_ROLE_TOPLEVEL)
@@ -203,7 +208,7 @@ void QBoxXdgShell::onXdgToplevelNewPopup(QWXdgPopup *popup)
     if (!woutput) {
         return;
     }
-    auto *qoutput = reinterpret_cast<QBoxOutPut*>(woutput->data);
+    auto *qoutput = reinterpret_cast<QBoxOutPut*>(woutput->handle()->data);
 
     int topMargin = 0; // TODO: read from config
 
