@@ -125,7 +125,7 @@ void QBoxXdgShell::onNewXdgSurface(wlr_xdg_surface *surface)
     /* Listen to the various events it can emit */
     connect(s->surface(), &QWSurface::map, this, &QBoxXdgShell::onMap);
     connect(s->surface(), &QWSurface::unmap, this, &QBoxXdgShell::onUnmap);
-    connect(s, &QWXdgSurface::newPopup, this, &QBoxXdgShell::onXdgToplevelNewPopup);
+    connect(s->toPopup(), &QWXdgPopup::newPopup, this, &QBoxXdgShell::onXdgToplevelNewPopup);
     connect(s, &QWXdgToplevel::requestMove, this, &QBoxXdgShell::onXdgToplevelRequestMove);
     connect(s, &QWXdgToplevel::requestResize, this, &QBoxXdgShell::onXdgToplevelRequestResize);
     connect(s, &QWXdgToplevel::requestMaximize, this, &QBoxXdgShell::onXdgToplevelRequestMaximize);
