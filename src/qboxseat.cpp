@@ -3,6 +3,7 @@
 
 #include <qwbackend.h>
 #include <qwcursor.h>
+#include <qwprimaryselection.h>
 #include <QCoreApplication>
 
 QBoxSeat::QBoxSeat(QBoxServer *server):
@@ -12,8 +13,10 @@ QBoxSeat::QBoxSeat(QBoxServer *server):
     connect(server->backend, &QWBackend::newInput, this, &QBoxSeat::onNewInput);
 
     m_seat = QWSeat::create(server->display, "seat0");
+    m_primarySelectionV1DeviceManager = QWPrimarySelectionV1DeviceManager::create(server->display);
     connect(m_seat, &QWSeat::requestSetCursor, this, &QBoxSeat::onRequestSetCursor);
     connect(m_seat, &QWSeat::requestSetSelection, this, &QBoxSeat::onRequestSetSelection);
+    connect(m_seat, &QWSeat::requestSetPrimarySelection, this, &QBoxSeat::onRequestSetPrimarySelection);
 }
 
 
@@ -26,6 +29,12 @@ void QBoxSeat::onRequestSetCursor(wlr_seat_pointer_request_set_cursor_event *eve
 void QBoxSeat::onRequestSetSelection(wlr_seat_request_set_selection_event *event)
 {
     m_seat->setSelection(event->source, event->serial);
+}
+
+void QBoxSeat::onRequestSetPrimarySelection(wlr_seat_request_set_primary_selection_event *event)
+{
+    auto *primarySelectionSource = QWPrimarySelectionSource::from(event->source);
+    primarySelectionSource->setPrimarySelection(m_seat, event->serial);
 }
 
 void QBoxSeat::onNewInput(QWInputDevice *device)

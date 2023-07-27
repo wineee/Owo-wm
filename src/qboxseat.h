@@ -4,6 +4,7 @@
 #include <qwseat.h>
 #include <qwkeyboard.h>
 #include <qwinputdevice.h>
+#include <qwprimaryselectionv1.h>
 #include <QObject>
 
 extern "C" {
@@ -13,6 +14,7 @@ extern "C" {
 using QW_NAMESPACE::QWSeat;
 using QW_NAMESPACE::QWKeyboard;
 using QW_NAMESPACE::QWInputDevice;
+using QW_NAMESPACE::QWPrimarySelectionV1DeviceManager;
 
 class QBoxServer;
 
@@ -27,6 +29,7 @@ public:
 private:
     void onRequestSetCursor(wlr_seat_pointer_request_set_cursor_event *event);
     void onRequestSetSelection(wlr_seat_request_set_selection_event *event);
+    void onRequestSetPrimarySelection(wlr_seat_request_set_primary_selection_event *event);
 
     void onNewInput(QWInputDevice *device);
 
@@ -36,6 +39,7 @@ private:
     bool handleKeybinding(xkb_keysym_t sym);
 
     QWSeat *m_seat;
+    QWPrimarySelectionV1DeviceManager *m_primarySelectionV1DeviceManager;
     QList<QWKeyboard*> m_keyboards;
 
     QBoxServer *m_server;
