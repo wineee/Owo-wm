@@ -8,6 +8,7 @@
 #include "qboxseat.h"
 #include "qboxoutput.h"
 #include "qboxxdgshell.h"
+#include "qboxlayershell.h"
 
 #include <QRect>
 
@@ -55,6 +56,7 @@ class QBoxServer : public QObject
     friend class QBoxSeat;
     friend class QBoxOutPut;
     friend class QBoxXdgShell;
+    friend class QBoxLayerShell;
     using View = QBoxOutPut::View;
 
 public:
@@ -74,10 +76,10 @@ public:
 
     QBoxOutPut *output;
     QBoxXdgShell *xdgShell;
+    QBoxLayerShell *layerShell;
     QBoxDecoration *decoration;
     QBoxCursor *cursor;
     QBoxSeat *seat;
-    QWSignalConnector sc;
 
     QList<View*> views;
     View *grabbedView = nullptr;

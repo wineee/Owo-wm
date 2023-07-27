@@ -1,4 +1,5 @@
 #include "qboxserver.h"
+#include "qboxlayershell.h"
 
 #include <QGuiApplication>
 #include <QLoggingCategory>
@@ -24,7 +25,14 @@ QBoxServer::QBoxServer()
     dataDeviceManager = QWDataDeviceManager::create(display);
 
     output = new QBoxOutPut(this);
+    /* Set up the xdg-shell. The xdg-shell is a Wayland protocol which is used
+     * for application windows. For more detail on shells, refer to Drew
+     * DeVault's article:
+     *
+     * https://drewdevault.com/2018/07/29/Wayland-shells.html
+    */
     xdgShell = new QBoxXdgShell(this);
+    layerShell = new QBoxLayerShell(this);
     decoration = new QBoxDecoration(this);
     cursor = new QBoxCursor(this);
     seat = new QBoxSeat(this);

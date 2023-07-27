@@ -8,6 +8,7 @@
 , wrapQtAppsHook
 , wayland
 , wayland-protocols
+, wlr-protocols
 , wayland-scanner
 , pixman
 , mesa
@@ -45,6 +46,7 @@ stdenv.mkDerivation rec {
     qwlroots
     wayland
     wayland-protocols
+    wlr-protocols
     pixman
     mesa
     vulkan-loader
